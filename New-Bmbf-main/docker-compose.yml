@@ -1,0 +1,54 @@
+version: '3.9'
+
+services:
+  # Frontend-Service
+  frontend:
+    build:
+      context: ./bmbf-fe
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080" # Lokaler Zugriff
+    depends_on:
+      - backend
+    networks:
+      - museum_network
+
+  # Backend-Service (Directus)
+  backend:
+    image: directus/directus:latest
+    container_name: directus
+    environment:
+      DIRECTUS_DATABASE_CLIENT: sqlite
+      DIRECTUS_DATABASE_FILENAME: /data/database.db
+      DIRECTUS_ADMIN_EMAIL: admin@example.com
+      DIRECTUS_ADMIN_PASSWORD: 1
+      DIRECTUS_ADMIN_FIRSTNAME: Admin
+      DIRECTUS_ADMIN_LASTNAME: User
+    volumes:
+      - ./bmbf-be/directus/extensions:/directus/extensions
+      - ./db-data:/data
+    ports:
+      - "8055:8055" # Lokaler Zugriff
+    networks:
+      - museum_network
+
+  # NGINX als Reverse Proxy
+  nginx:
+    image: nginx:latest
+    container_name: museum_nginx
+    ports:
+      - "80:80" # Öffentlicher Zugriff
+    volumes:
+      - ./NGINX/nginx.conf:/etc/nginx/nginx.conf:ro 
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - museum_network
+
+networks:
+  museum_network:
+    driver: bridge
+
+volumes:
+  db_data:
